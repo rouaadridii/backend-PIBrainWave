@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.brainwaveusermanagement.Entities.Person;
+import tn.esprit.brainwaveusermanagement.Entities.UserStatus;
 import tn.esprit.brainwaveusermanagement.Repositories.PersonRepository;
 import tn.esprit.brainwaveusermanagement.dto.LoginRequest;
 import tn.esprit.brainwaveusermanagement.Utils.JwtUtils;
@@ -44,6 +45,13 @@ public class LoginController {
 
         // Log if user is found
         System.out.println("User found: " + person.getEmail());
+
+        // Check if the user's status is PENDING
+        if (person.getStatus() == UserStatus.PENDING) {
+            // If the account is pending approval, return an error message
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Your account is pending approval by the admin.");
+        }
 
         // Validate password
         if (!passwordEncoder.matches(request.getPassword(), person.getPassword())) {

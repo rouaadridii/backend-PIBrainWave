@@ -7,6 +7,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tn.esprit.brainwaveusermanagement.Entities.Person;
+import tn.esprit.brainwaveusermanagement.Exceptions.PendingAccountException;
 import tn.esprit.brainwaveusermanagement.Repositories.PersonRepository;
 
 import java.util.ArrayList;
@@ -23,6 +24,11 @@ public class UserService implements UserDetailsService {
             // Retrieve the user from the repository
             Person person = personRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if the user status is 'PENDING'
+        if ("PENDING".equals(person.getStatus())) {
+            throw new PendingAccountException("Account is pending approval.") {};
+        }
 
             // Initialize authorities as an empty list
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();

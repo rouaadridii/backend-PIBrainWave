@@ -7,6 +7,8 @@
     import org.springframework.web.bind.annotation.*;
     import org.springframework.web.multipart.MultipartFile;
     import tn.esprit.brainwaveusermanagement.Entities.Person;
+    import tn.esprit.brainwaveusermanagement.Entities.RoleType;
+    import tn.esprit.brainwaveusermanagement.Entities.UserStatus;
     import tn.esprit.brainwaveusermanagement.dto.SignupRequest;
     import tn.esprit.brainwaveusermanagement.Services.CloudinaryService;
     import tn.esprit.brainwaveusermanagement.Services.PersonService;
@@ -59,6 +61,14 @@
                 person.setEmail(signupRequest.getEmail());
                 person.setPassword(PasswordEncoderUtil.encodePassword(signupRequest.getPassword())); // Encrypt password
                 person.setRole(signupRequest.getRole());
+
+                // Set status based on role
+                // Check if the role is TEACHER and set the status to PENDING
+                if (signupRequest.getRole() == RoleType.TEACHER) {
+                    person.setStatus(UserStatus.PENDING);
+                } else if (signupRequest.getRole() == RoleType.STUDENT) {
+                    person.setStatus(UserStatus.APPROVED);
+                }
 
                 // Set nullable fields
                 if (birthDate != null) {

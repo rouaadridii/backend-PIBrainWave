@@ -47,120 +47,109 @@ public class Person {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- public void setName(String name) {
+     public void setStatus(UserStatus status) {
+        this.status = status;
+    }
+    public void setName(String name) {
   this.name = name;
  }
 
- public String getSurname() {
+     public String getSurname() {
   return surname;
  }
 
- public String getCv() {
+    public String getCv() {
   return cv;
  }
- public String getDiploma() {
+    public String getDiploma() {
   return diploma;
  }
 
- public String getLevel() {
+    public String getLevel() {
   return level;
  }
 
- public void setSurname(String surname) {
+    public void setSurname(String surname) {
   this.surname = surname;
  }
 
- public void setEmail(String email) {
+    public void setEmail(String email) {
   this.email = email;
  }
 
- public void setPassword(String password) {
+    public void setPassword(String password) {
   this.password = password;
  }
 
- public void setPhoneNumber(String phoneNumber) {
+    public void setPhoneNumber(String phoneNumber) {
   this.phoneNumber = phoneNumber;
  }
 
- public void setAddress(String address) {
+    public void setAddress(String address) {
   this.address = address;
  }
 
- public void setBirthDate(Date birthDate) {
+    public void setBirthDate(Date birthDate) {
   this.birthDate = birthDate;
  }
 
- public void setLevel(String level) {
+    public void setLevel(String level) {
   this.level = level;
  }
 
- public void setRole(RoleType role) {
+    public void setRole(RoleType role) {
   this.role = role;
  }
 
- public RoleType getRole() {
+    public RoleType getRole() {
   return role;
  }
- public String getEmail() {
+    public String getEmail() {
   return email;
  }
 
- public String getPassword() {
+    public String getPassword() {
   return password;
  }
- public String getPhoneNumber() {
+    public String getPhoneNumber() {
   return phoneNumber;
  }
 
- public String getAddress() {
+    public String getAddress() {
   return address;
  }
 
- public Date getBirthDate() {
+    public Date getBirthDate() {
   return birthDate;
  }
 
- public String getPicture() {
+    public String getPicture() {
   return picture;
  }
 
- public String getName() {
+    public String getName() {
   return name;
  }
 
- public void setCin(String cin) {
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public void setCin(String cin) {
   this.cin = cin;
  }
- public String getCin() {
+    public String getCin() {
   return this.cin;
  }
- public void setPicture(String picture) {
+    public void setPicture(String picture) {
   this.picture = picture;
  }
 
- public void setCv(String cv) {
+    public void setCv(String cv) {
   this.cv = cv;
  }
 
- public void setDiploma(String diploma) {
+    public void setDiploma(String diploma) {
   this.diploma = diploma;
  }
 }
