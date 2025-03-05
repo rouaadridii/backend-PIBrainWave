@@ -1,6 +1,7 @@
 package tn.esprit.brainwaveusermanagement.Controllers;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import tn.esprit.brainwaveusermanagement.Entities.Person;
 import tn.esprit.brainwaveusermanagement.Entities.UserStatus;
 import tn.esprit.brainwaveusermanagement.Repositories.PersonRepository;
+import tn.esprit.brainwaveusermanagement.Services.PasswordResetService;
+import tn.esprit.brainwaveusermanagement.Services.ReCaptchaService;
 import tn.esprit.brainwaveusermanagement.dto.LoginRequest;
 import tn.esprit.brainwaveusermanagement.Utils.JwtUtils;
 
@@ -26,12 +29,16 @@ public class LoginController {
     private final PersonRepository personRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private final ReCaptchaService reCaptchaService;
+    private PasswordResetService passwordResetService;
 
-    public LoginController(AuthenticationManager authenticationManager, PersonRepository personRepository, PasswordEncoder passwordEncoder, JwtUtils jwtUtils) {
+    public LoginController(AuthenticationManager authenticationManager, PersonRepository personRepository, PasswordEncoder passwordEncoder, JwtUtils jwtUtils,ReCaptchaService reCaptchaService,PasswordResetService passwordResetService) {
         this.authenticationManager = authenticationManager;
         this.personRepository = personRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
+        this.reCaptchaService=reCaptchaService;
+        this.passwordResetService=passwordResetService;
     }
 
     @PostMapping("/login")
@@ -46,11 +53,27 @@ public class LoginController {
         // Log if user is found
         System.out.println("User found: " + person.getEmail());
 
+
+        // Check if the user's account is banned
+        if (person.isBanned()) {
+            // If the account is banned, return a FORBIDDEN status with a message
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Your account has been banned. Please contact support.");
+        }
+
         // Check if the user's status is PENDING
         if (person.getStatus() == UserStatus.PENDING) {
             // If the account is pending approval, return an error message
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Your account is pending approval by the admin.");
+        }
+
+        if (request.getRecaptchaToken() == null || request.getRecaptchaToken().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("reCAPTCHA token is required.");
+        }
+
+        if (!reCaptchaService.verifyRecaptcha(request.getRecaptchaToken())) {
+            return ResponseEntity.badRequest().body("Invalid reCAPTCHA.");
         }
 
         // Validate password
@@ -82,6 +105,37 @@ public class LoginController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        passwordResetService.sendPasswordResetEmail(email);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Password reset email sent successfully.");
+        return ResponseEntity.ok(response);
+    }
 
+    @PostMapping("/verify-token/{token}")
+    public ResponseEntity<?> verifyToken(@PathVariable String token) {
+        String email = passwordResetService.validateToken(token);
+        if (email != null) {
+            return ResponseEntity.ok().build(); // Token is valid
+        } else {
+            return ResponseEntity.badRequest().build(); // Token is invalid
+        }
+    }
+
+    @PostMapping("/reset-password/{token}")
+    public ResponseEntity<Map<String, String>> resetPassword(@PathVariable String token, @RequestBody Map<String, String> request) {
+        String newPassword = request.get("newPassword");
+        boolean success = passwordResetService.resetPassword(token, newPassword);
+        Map<String, String> response = new HashMap<>();
+        if (success) {
+            response.put("message", "Password reset successfully.");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("message", "Invalid or expired token.");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 
 }

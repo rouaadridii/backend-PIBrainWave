@@ -35,6 +35,8 @@ public class Person {
      String level;
      @Enumerated(EnumType.STRING)
      UserStatus status;
+     @Column(nullable = false)
+     boolean banned = false;
      @Enumerated(EnumType.STRING)
      RoleType role;
 
@@ -152,4 +154,11 @@ public class Person {
     public void setDiploma(String diploma) {
   this.diploma = diploma;
  }
+    public boolean isBanned() {
+        return banned;
+    }
+
+    public void setBanned(boolean banned) {
+        this.banned = banned;
+    }
 }

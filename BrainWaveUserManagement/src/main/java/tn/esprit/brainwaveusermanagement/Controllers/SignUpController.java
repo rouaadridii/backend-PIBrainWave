@@ -2,13 +2,14 @@
 
     import jakarta.validation.Valid;
     import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.http.MediaType;
-    import org.springframework.http.ResponseEntity;
+    import org.springframework.http.*;
     import org.springframework.web.bind.annotation.*;
+    import org.springframework.web.client.RestTemplate;
     import org.springframework.web.multipart.MultipartFile;
     import tn.esprit.brainwaveusermanagement.Entities.Person;
     import tn.esprit.brainwaveusermanagement.Entities.RoleType;
     import tn.esprit.brainwaveusermanagement.Entities.UserStatus;
+    import tn.esprit.brainwaveusermanagement.Services.EmailService;
     import tn.esprit.brainwaveusermanagement.dto.SignupRequest;
     import tn.esprit.brainwaveusermanagement.Services.CloudinaryService;
     import tn.esprit.brainwaveusermanagement.Services.PersonService;
@@ -28,6 +29,8 @@
         private PersonService personService;
         @Autowired
         private CloudinaryService cloudinaryService;
+        @Autowired
+        private EmailService emailService;
 
         @PostMapping("/signup")
         public ResponseEntity<?> signup(@Valid @ModelAttribute SignupRequest signupRequest,
@@ -43,6 +46,12 @@
                 if (personService.existsByEmail(signupRequest.getEmail())) {
                     Map<String, String> errorResponse = new HashMap<>();
                     errorResponse.put("error", "Email or CIN already exists!");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+
+                if (emailService.getStoredVerificationCode(signupRequest.getEmail()) != null) {
+                    Map<String, String> errorResponse = new HashMap<>();
+                    errorResponse.put("error", "Email not verified. Please verify your email before signing up.");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
 
@@ -107,6 +116,20 @@
                 // Save the person in the database
                 personService.savePerson(person);
 
+                // Send welcome email after successful registration
+                String subject = "Welcome to Our Platform!";
+                String name = person.getName();
+                String surname = person.getSurname();
+                String body =name +" " + surname +"\n Thank you for joining! We're excited to have you with us.";
+
+
+                // If the role is TEACHER and the status is PENDING, include additional instructions
+                if (person.getRole() == RoleType.TEACHER) {
+                    body += "\nYour account is pending approval from an admin.";
+                }
+
+                emailService.sendEmail(person.getEmail(), subject, body);
+
                 Map<String, String> successResponse = new HashMap<>();
                 successResponse.put("message", "User registered successfully!");
                 return ResponseEntity.ok(successResponse);
@@ -117,4 +140,38 @@
                 return ResponseEntity.internalServerError().body(errorResponse);
             }
         }
+
+        @PostMapping("/verify-email")
+        public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> payload) {
+            String email = payload.get("email");
+            String code = payload.get("code");
+
+            if (email == null || code == null) {
+                return ResponseEntity.badRequest().body("Email and code are required.");
+            }
+
+            String storedCode = emailService.getStoredVerificationCode(email);
+
+            if (storedCode == null || !storedCode.equals(code)) {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Invalid verification code.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            }
+
+            emailService.removeVerificationCode(email);
+
+            Map<String, String> successResponse = new HashMap<>();
+            successResponse.put("message", "Email verified successfully.");
+            return ResponseEntity.ok(successResponse);
+        }
+
+        @PostMapping("/send-verification-email")
+        public ResponseEntity<?> sendVerificationEmail(@RequestBody Map<String, String> payload){
+            String email = payload.get("email");
+            emailService.sendVerificationEmail(email);
+            Map<String, String> successResponse = new HashMap<>();
+            successResponse.put("message", "Verification email sent.");
+            return ResponseEntity.ok(successResponse);
+        }
+
     }

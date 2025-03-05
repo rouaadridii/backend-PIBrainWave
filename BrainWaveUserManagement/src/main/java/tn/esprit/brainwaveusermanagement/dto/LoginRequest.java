@@ -8,6 +8,11 @@ import lombok.Setter;
 public class LoginRequest {
     private String email;
     private String password;
+    private String recaptchaToken;
+
+    public String getRecaptchaToken() {
+        return recaptchaToken;
+    }
 
     public String getEmail() {
         return email;
