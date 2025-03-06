@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import tn.esprit.brainwaveusermanagement.Entities.Person;
 import tn.esprit.brainwaveusermanagement.Entities.UserStatus;
 import tn.esprit.brainwaveusermanagement.Repositories.PersonRepository;
+import tn.esprit.brainwaveusermanagement.Services.EmailService;
 import tn.esprit.brainwaveusermanagement.Services.PasswordResetService;
 import tn.esprit.brainwaveusermanagement.Services.ReCaptchaService;
 import tn.esprit.brainwaveusermanagement.dto.LoginRequest;
@@ -31,39 +32,33 @@ public class LoginController {
     private final JwtUtils jwtUtils;
     private final ReCaptchaService reCaptchaService;
     private PasswordResetService passwordResetService;
+    private final EmailService emailService;
 
-    public LoginController(AuthenticationManager authenticationManager, PersonRepository personRepository, PasswordEncoder passwordEncoder, JwtUtils jwtUtils,ReCaptchaService reCaptchaService,PasswordResetService passwordResetService) {
+    public LoginController(AuthenticationManager authenticationManager, PersonRepository personRepository, PasswordEncoder passwordEncoder, JwtUtils jwtUtils,ReCaptchaService reCaptchaService,PasswordResetService passwordResetService, EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.personRepository = personRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.reCaptchaService=reCaptchaService;
         this.passwordResetService=passwordResetService;
+        this.emailService=emailService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        // Log the incoming request for debugging
         System.out.println("Login attempt for email: " + request.getEmail());
-
-        // Retrieve the user by email
         Person person = personRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Log if user is found
         System.out.println("User found: " + person.getEmail());
 
-
-        // Check if the user's account is banned
         if (person.isBanned()) {
-            // If the account is banned, return a FORBIDDEN status with a message
+            // If the account is banned
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Your account has been banned. Please contact support.");
         }
 
-        // Check if the user's status is PENDING
         if (person.getStatus() == UserStatus.PENDING) {
-            // If the account is pending approval, return an error message
+            // If the account is pending approval
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Your account is pending approval by the admin.");
         }
@@ -81,27 +76,12 @@ public class LoginController {
             System.out.println("Invalid credentials for user: " + request.getEmail());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
-
-        // Log successful password validation
         System.out.println("Password valid for user: " + request.getEmail());
 
-        // Authenticate the user
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-
-        // Set authentication context
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        // Generate JWT token
-        String token = jwtUtils.generateJwtToken(authentication);
-        System.out.println("Generated JWT token: " + token);
-
-        // Return token in response
+        // Send 2FA verification email
+        emailService.sendVerificationEmail(person.getEmail());
         Map<String, String> response = new HashMap<>();
-        response.put("token", "Bearer " + token);
-        response.put("email", person.getEmail());
-
+        response.put("message", "2FA code sent to your email. Please verify.");
         return ResponseEntity.ok(response);
     }
 
@@ -135,6 +115,37 @@ public class LoginController {
         } else {
             response.put("message", "Invalid or expired token.");
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PostMapping("/verify-2fa")
+    public ResponseEntity<?> verify2FACode(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+        // Retrieve the stored code for the user
+        String storedCode = emailService.getStoredVerificationCode(email);
+        if (storedCode != null && storedCode.equals(code)) {
+            // Code is correct, authenticate the user and generate JWT
+            Person person = personRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, request.get("password"))
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            String token = jwtUtils.generateJwtToken(authentication);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("token", "Bearer " + token);
+            response.put("email", email);
+
+            emailService.removeVerificationCode(email);
+
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid 2FA code.");
         }
     }
 

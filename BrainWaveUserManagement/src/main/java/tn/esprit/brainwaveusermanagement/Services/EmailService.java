@@ -1,8 +1,6 @@
 package tn.esprit.brainwaveusermanagement.Services;
 
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
+
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
@@ -11,7 +9,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 import com.sendgrid.*;
 
-import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -23,7 +21,7 @@ public class EmailService {
 
     private Dotenv dotenv = Dotenv.load();
     private final Logger logger = LoggerFactory.getLogger(EmailService.class);
-    private Map<String, String> verificationCodes = new HashMap<>();
+    private Map<String, VerificationData> verificationDataMap = new HashMap<>();
 
     @Autowired
     private JavaMailSender mailSender;
@@ -60,26 +58,40 @@ public class EmailService {
         return String.valueOf(code);
     }
 
-    public void storeVerificationCode(String email, String code) {
-        verificationCodes.put(email, code);
+    public void storeVerificationCode(String email, String code, LocalDateTime expirationTime) {
+        verificationDataMap.put(email, new VerificationData(code, expirationTime));
     }
-
     public String getStoredVerificationCode(String email) {
-        return verificationCodes.get(email);
+
+        VerificationData data = verificationDataMap.get(email);
+        if (data != null && LocalDateTime.now().isBefore(data.expirationTime)) {
+            return data.code;
+        }
+        return null;
     }
 
     public void removeVerificationCode(String email) {
-        verificationCodes.remove(email);
+        verificationDataMap.remove(email);
     }
-
     public void sendVerificationEmail(String to) {
         String code = generateVerificationCode();
-        storeVerificationCode(to, code);
+        LocalDateTime expirationTime = LocalDateTime.now().plusSeconds(30);
+        storeVerificationCode(to, code, expirationTime);
 
         String subject = "Email Verification";
-        String body = "Your verification code is: " + code;
+        String body = "Your verification code is: " + code +"\n This code will expire at: "+ expirationTime;
 
-        sendEmail(to, subject, body); // Use your existing sendEmail method
+        sendEmail(to, subject, body);
+    }
+
+    private static class VerificationData {
+        String code;
+        LocalDateTime expirationTime;
+
+        VerificationData(String code, LocalDateTime expirationTime) {
+            this.code = code;
+            this.expirationTime = expirationTime;
+        }
     }
 
 

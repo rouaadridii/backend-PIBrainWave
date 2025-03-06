@@ -26,7 +26,7 @@
 
         @GetMapping("/profile")
         public ResponseEntity<Person> getProfile(@RequestHeader("Authorization") String token) {
-            String extractedToken = token.replace("Bearer ", ""); // Remove 'Bearer ' prefix if present
+            String extractedToken = token.replace("Bearer ", "");
             Person user = personService.getAuthenticatedUser(extractedToken);
             return ResponseEntity.ok(user);
         }

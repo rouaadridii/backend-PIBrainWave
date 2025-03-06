@@ -39,7 +39,6 @@
                                              @RequestParam(value = "diploma", required = false) MultipartFile diploma)
         {
             try {
-                // Log received signup request
                 System.out.println("Signup request received: " + signupRequest.getEmail());
 
                 // Check if email or CIN already exists
@@ -72,16 +71,14 @@
                 person.setRole(signupRequest.getRole());
 
                 // Set status based on role
-                // Check if the role is TEACHER and set the status to PENDING
                 if (signupRequest.getRole() == RoleType.TEACHER) {
                     person.setStatus(UserStatus.PENDING);
                 } else if (signupRequest.getRole() == RoleType.STUDENT) {
                     person.setStatus(UserStatus.APPROVED);
                 }
 
-                // Set nullable fields
                 if (birthDate != null) {
-                    person.setBirthDate(birthDate);  // Set birthDate in the Person entity
+                    person.setBirthDate(birthDate);
                 }
 
                 if (signupRequest.getPhoneNumber() != null) {
@@ -112,8 +109,6 @@
                     person.setDiploma(diplomaUrl); // Set Diploma URL to the proper field
                 }
 
-
-                // Save the person in the database
                 personService.savePerson(person);
 
                 // Send welcome email after successful registration
@@ -123,7 +118,7 @@
                 String body =name +" " + surname +"\n Thank you for joining! We're excited to have you with us.";
 
 
-                // If the role is TEACHER and the status is PENDING, include additional instructions
+                // If the role is TEACHER and the status is PENDING
                 if (person.getRole() == RoleType.TEACHER) {
                     body += "\nYour account is pending approval from an admin.";
                 }

@@ -41,8 +41,22 @@ public class AdminController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
 
-        teacher.setStatus(UserStatus.APPROVED);
-        personService.savePerson(teacher);
+        // Send Accepted email
+        String to = teacher.getEmail();
+        String subject = "Application Accepted";
+        String name = teacher.getName();
+        String surname = teacher.getSurname();
+        String body = "\nDear " + name +" "+ surname + " \nWe re happy to inform you that your application to become a teacher has been accepted.\n Welcome Among Us!.";
+        System.out.println("Sending acception email to: " + to);
+        try {
+            emailService.sendEmail(to, subject, body);
+            teacher.setStatus(UserStatus.APPROVED);
+            personService.savePerson(teacher);
+        } catch (Exception e) {
+            // Handle email sending error
+            System.err.println("Error sending rejection email: " + e.getMessage());
+        }
+
         Map<String, String> successResponse = new HashMap<>();
         successResponse.put("message", "Teacher approved successfully!");
         return ResponseEntity.ok(successResponse);
@@ -59,18 +73,18 @@ public class AdminController {
         }
 
         // Send rejection email
-        String to = teacher.getEmail(); // Assuming Person has an getEmail() method
+        String to = teacher.getEmail();
         String subject = "Application Rejection";
         String name = teacher.getName();
         String surname = teacher.getSurname();
         String body = "\nDear " + name +" "+ surname + " \nWe regret to inform you that your application to become a teacher has been rejected. We appreciate your interest and wish you the best in your future endeavors.";
-        System.out.println("Sending rejection email to: " + to); // Add this line
+        System.out.println("Sending rejection email to: " + to);
         try {
-            emailService.sendEmail(to, subject, body); // Corrected line: Call the EmailService
-            // Delete the teacher's account
+            emailService.sendEmail(to, subject, body);
+
             personService.deletePerson(teacher);
         } catch (Exception e) {
-            // Handle email sending error (e.g., log it)
+
             System.err.println("Error sending rejection email: " + e.getMessage());
         }
 

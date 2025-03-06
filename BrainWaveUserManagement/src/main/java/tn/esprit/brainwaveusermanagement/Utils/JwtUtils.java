@@ -20,7 +20,6 @@ public class JwtUtils {
     @Value("${jwt.expiration}")
     private int jwtExpirationMs;
 
-    // Generate JWT token
     public String generateJwtToken(Authentication authentication) {
         String username = authentication.getName();
 

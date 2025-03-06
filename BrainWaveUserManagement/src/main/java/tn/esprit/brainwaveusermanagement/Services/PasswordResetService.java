@@ -19,21 +19,16 @@ public class PasswordResetService {
 
     private Map<String, String> resetTokens = new HashMap<>();
 
-    // Send password reset email
     public void sendPasswordResetEmail(String email) {
 
         if (!personService.existsByEmail(email)) {
             return;
         }
-        // Generate a random token
         String token = UUID.randomUUID().toString();
 
-        // Store token temporarily (in-memory, use DB in production)
         resetTokens.put(token, email);
 
-        // Construct the reset URL
         String resetUrl = "http://localhost:4200/reset-password/" + token;
-
         String subject = "Password Reset Request";
         String body = "To reset your password, click the following link: " + resetUrl;
 
@@ -44,7 +39,6 @@ public class PasswordResetService {
         }
     }
 
-    // Validate the token
     public String validateToken(String token) {
         if (token == null || token.isEmpty()) {
             return null;
@@ -52,7 +46,6 @@ public class PasswordResetService {
         return resetTokens.get(token);
     }
 
-    // Reset password logic (change password)
     public boolean resetPassword(String token, String newPassword) {
         String email = validateToken(token);
         if (email != null) {

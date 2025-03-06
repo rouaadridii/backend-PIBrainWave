@@ -29,6 +29,7 @@ public class PersonService {
     private final JwtUtils jwtUtils;
 
     private CloudinaryService cloudinaryService;
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     public PersonService(PersonRepository personRepository, JwtUtils jwtUtils,PasswordEncoder passwordEncoder,CloudinaryService cloudinaryService) {
@@ -77,9 +78,7 @@ public class PersonService {
     }
 
     public Person getAuthenticatedUser(String token) {
-        // Extract email from the token
         String email = jwtUtils.extractUsername(token);
-
         // Fetch user from database
         return personRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -89,18 +88,16 @@ public class PersonService {
         String extractedToken = token.replace("Bearer ", "");
         Person user = getAuthenticatedUser(extractedToken);
 
-        // ✅ If user provided a new password, verify old password first
-        if (updateRequest.getNewPassword() != null && !updateRequest.getNewPassword().isEmpty()) {
-            // Ensure old password is provided and correct
-            if (updateRequest.getOldPassword() == null ||
-                    !passwordEncoder.matches(updateRequest.getOldPassword(), user.getPassword())) {
+        // If user provided a new password, verify old password first
+        if (updateRequest.getOldPassword() != null && !updateRequest.getOldPassword().isEmpty()) {
+            if (!passwordEncoder.matches(updateRequest.getOldPassword(), user.getPassword())) {
                 throw new RuntimeException("Old password is incorrect!");
             }
             // Encrypt and update password
             user.setPassword(passwordEncoder.encode(updateRequest.getNewPassword()));
         }
 
-        // ✅ Update other profile fields only if provided
+        // Update other profile fields only if provided
         if (updateRequest.getName() != null) user.setName(updateRequest.getName());
         if (updateRequest.getSurname() != null) user.setSurname(updateRequest.getSurname());
         if (updateRequest.getPhoneNumber() != null) user.setPhoneNumber(updateRequest.getPhoneNumber());
@@ -119,7 +116,6 @@ public class PersonService {
             user.setBirthDate(birthDate);  // Set birthDate in the Person entity
         }
 
-        // ✅ Save updated user
         return personRepository.save(user);
     }
 
