@@ -144,5 +144,39 @@ public class PersonService {
             return null;
         }
     }
+
+    public void saveFaceDescriptor(String token, List<Float> faceDescriptor) {
+        String extractedToken = token.replace("Bearer ", "");
+        String userEmail = jwtUtils.extractUsername(extractedToken);
+        Person person = personRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new NoSuchElementException("User not found with email from token: " + userEmail));
+        person.setFaceDescriptor(faceDescriptor);
+        personRepository.save(person);
+    }
+
+    public Person authenticateWithFace(List<Float> receivedDescriptor) {
+        List<Person> users = personRepository.findByRoleNot(RoleType.ADMIN); // Consider only non-admin users
+
+        for (Person user : users) {
+            List<Float> storedDescriptor = user.getFaceDescriptor();
+            if (storedDescriptor != null && storedDescriptor.size() == 128) {
+                double distance = calculateEuclideanDistance(receivedDescriptor, storedDescriptor);
+                // Define a threshold for face matching
+                double threshold = 0.6; // Adjust this value based on your testing
+                if (distance < threshold) {
+                    return user;
+                }
+            }
+        }
+        return null; // No matching face found
+    }
+
+    private double calculateEuclideanDistance(List<Float> descriptor1, List<Float> descriptor2) {
+        double sum = 0;
+        for (int i = 0; i < descriptor1.size(); i++) {
+            sum += Math.pow(descriptor1.get(i) - descriptor2.get(i), 2);
+        }
+        return Math.sqrt(sum);
+    }
 }
 

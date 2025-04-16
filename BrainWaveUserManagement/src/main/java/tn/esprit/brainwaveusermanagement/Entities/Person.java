@@ -3,8 +3,10 @@ package tn.esprit.brainwaveusermanagement.Entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import tn.esprit.brainwaveusermanagement.Utils.FloatListToStringConverter;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Getter
@@ -39,6 +41,9 @@ public class Person {
      boolean banned = false;
      @Enumerated(EnumType.STRING)
      RoleType role;
+    @Column(name = "face_descriptor", columnDefinition = "float[]")
+    @Convert(converter = FloatListToStringConverter.class)
+    List<Float> faceDescriptor;
 
 
 
@@ -46,10 +51,14 @@ public class Person {
 
 
 
+    public List<Float> getFaceDescriptor() {
+        return faceDescriptor;
+    }
 
-
-
-     public void setStatus(UserStatus status) {
+    public void setFaceDescriptor(List<Float> faceDescriptor) {
+        this.faceDescriptor = faceDescriptor;
+    }
+    public void setStatus(UserStatus status) {
         this.status = status;
     }
     public void setName(String name) {

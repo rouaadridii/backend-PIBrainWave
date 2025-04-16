@@ -16,7 +16,9 @@
     import java.io.IOException;
     import java.nio.file.attribute.UserPrincipal;
     import java.util.HashMap;
+    import java.util.List;
     import java.util.Map;
+    import java.util.NoSuchElementException;
 
     @RestController
     @RequestMapping("/api/user")
@@ -42,6 +44,25 @@
                 return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
             } catch (Exception e) {
                 return ResponseEntity.internalServerError().body(Map.of("error", "Error updating profile: " + e.getMessage()));
+            }
+        }
+
+        @PostMapping("/register-face")
+        public ResponseEntity<?> registerFace(@RequestHeader("Authorization") String token, @RequestBody Map<String, List<Float>> requestBody) {
+            List<Float> faceDescriptor = requestBody.get("faceDescriptor");
+
+            if (faceDescriptor == null || faceDescriptor.isEmpty() || faceDescriptor.size() != 128) {
+                return new ResponseEntity<>("Invalid face descriptor format.", HttpStatus.BAD_REQUEST);
+            }
+
+            try {
+                String extractedToken = token.replace("Bearer ", "");
+                personService.saveFaceDescriptor(extractedToken, faceDescriptor);
+                return new ResponseEntity<>(Map.of("message", "Face registered successfully."), HttpStatus.OK);
+            } catch (NoSuchElementException e) {
+                return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+            } catch (Exception e) {
+                return new ResponseEntity<>(Map.of("error", "Failed to register face: " + e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
 
